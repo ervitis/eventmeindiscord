@@ -43,7 +43,7 @@ class EventMeBot(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        print(error)
+        self.__logger.error(f'Something wrong happened in discord: {error}. Context: {ctx}')
 
 
 def setup(client):
