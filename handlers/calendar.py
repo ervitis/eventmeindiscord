@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-import json
+
 import os
 import re
-from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+from pytz import timezone
 from typing import Type
 
 from google.auth.transport.requests import Request
@@ -11,21 +13,17 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 
-@dataclass
 class EventTime(object):
-    dateTime: str
-    timeZone: str
+
+    def __init__(self, date_time, time_zone):
+        self.date_time: datetime = date_time
+        self.time_zone: timezone = time_zone
 
 
-@dataclass
 class Event(object):
-    name: str
-    start: EventTime
-    end: EventTime
-    status: str = 'confirmed'
-    timeZone: str = 'Japan/Tokyo'
-
+    __default_format_datetime = '%Y%m%d%H%M'
     __c = re.compile
+    __ptime = datetime.strptime
 
     __fields = {
         '__required': ['name', 'start', 'end'],
@@ -35,40 +33,77 @@ class Event(object):
         },
         'start': {
             'empty': False,
-            'format': __c(r'^22[0-9]{2}[0|1][]MMDDHHmm')
+            'format': __c(r'^(\d{4})(\d{2})(\d{2})\d{2}\d{2}$'),
+            'dateformat': __ptime
         },
         'end': {
             'empty': False,
             'format': __c(r'\d{1,2}[H|M]')
         }
     }
+    _args = None
 
-    @classmethod
-    def to_json(cls):
-        return json.dumps(cls.__dict__)
+    def __init__(self, **kwargs):
+        self._args = kwargs
 
-    @classmethod
-    def validate_event(cls, args: dict) -> bool:
-        # name=name start=YYYYMMDDHHmm end=NH|NM;N=1..23|59
-        # name=test start=202104222230 end=1H
+        if not self._validate_event():
+            raise ValueError('arguments not valid')
+
+        self.name = kwargs.get('name')
+        self.time_zone = kwargs.get('time_zone', 'Asia/Tokyo')
+        self.start = EventTime(
+            self.__ptime(kwargs.get('start'), self.__default_format_datetime),
+            timezone(self.time_zone)
+        )
+        self.end = kwargs.get('end')
+        self.status = kwargs.get('status', 'confirmed')
+
+    def to_json(self):
+        if self.end.find('H') > 0:
+            delta = timedelta(hours=int(self.end[:-1]))
+        else:
+            delta = timedelta(minutes=int(self.end[:-1]))
+        end_date = self.start.date_time + delta
+        return dict(
+            start=dict(
+                dateTime=f'{self.start.date_time:%Y-%m-%dT%H:%M:00}',
+                timeZone=f'{self.start.time_zone}'
+            ),
+            end=dict(
+                dateTime=f'{end_date:%Y-%m-%dT%H:%M:00}',
+                timeZone=f'{self.start.time_zone}'
+            ),
+            summary=self.name,
+            status=self.status,
+        )
+
+    def _validate_event(self) -> bool:
+        args = self._args
         if len(args) != 3:
             return False
 
         c = 0
         for k, v in args.items():
-            if k in cls.__fields['__required']:
+            if k in self.__fields['__required']:
                 c += 1
-            if k not in cls.__fields:
+            if k not in self.__fields:
                 return False
-            dv = cls.__fields[k]
+            dv = self.__fields[k]
             if dv['empty'] and v.strip().lower() == '':
                 return False
             if 'format' not in dv:
                 continue
             if not dv['format'].match(v):
                 return False
-        if c != len(cls.__fields['__required']):
+            if 'dateformat' not in dv:
+                continue
+            try:
+                dv['dateformat'](v, self.__default_format_datetime)
+            except ValueError:
+                return False
+        if c != len(self.__fields['__required']):
             return False
+        del self._args
         return True
 
 
@@ -116,6 +151,7 @@ class Calendar(object):
         if not self._service:
             self._build_service()
         try:
-            self._service.events().insert(calendarId=self.__default_calendar, body=event.to_json()).execute()
+            body = event.to_json()
+            return self._service.events().insert(calendarId=self.__default_calendar, body=body).execute()
         except Exception as e:
             raise e
