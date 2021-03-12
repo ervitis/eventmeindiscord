@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import os
+import re
 from dataclasses import dataclass
 from typing import Type
 
@@ -21,18 +22,54 @@ class Event(object):
     name: str
     start: EventTime
     end: EventTime
-    summary: str
-    description: str
     status: str = 'confirmed'
     timeZone: str = 'Japan/Tokyo'
+
+    __c = re.compile
+
+    __fields = {
+        '__required': ['name', 'start', 'end'],
+        'name': {
+            'empty': False,
+            'format': __c(r'\w+')
+        },
+        'start': {
+            'empty': False,
+            'format': __c(r'^22[0-9]{2}[0|1][]MMDDHHmm')
+        },
+        'end': {
+            'empty': False,
+            'format': __c(r'\d{1,2}[H|M]')
+        }
+    }
 
     @classmethod
     def to_json(cls):
         return json.dumps(cls.__dict__)
 
     @classmethod
-    def validate_event(cls, args):
-        print(args)
+    def validate_event(cls, args: dict) -> bool:
+        # name=name start=YYYYMMDDHHmm end=NH|NM;N=1..23|59
+        # name=test start=202104222230 end=1H
+        if len(args) != 3:
+            return False
+
+        c = 0
+        for k, v in args.items():
+            if k in cls.__fields['__required']:
+                c += 1
+            if k not in cls.__fields:
+                return False
+            dv = cls.__fields[k]
+            if dv['empty'] and v.strip().lower() == '':
+                return False
+            if 'format' not in dv:
+                continue
+            if not dv['format'].match(v):
+                return False
+        if c != len(cls.__fields['__required']):
+            return False
+        return True
 
 
 class Calendar(object):

@@ -16,8 +16,9 @@ class EventMeBot(commands.Cog):
         await ctx.channel.send(f'Subcommands: {", ".join(self._subcommands)}')
 
     @ev.command()
-    async def new(self, ctx, *, event_data):
-        if not Event.validate_event(event_data):
+    async def new(self, ctx, name, start, end):
+        # -ev new test 202104222230 1H
+        if not Event.validate_event(dict(name=name, start=start, end=end)):
             await ctx.channel.send('Unrecognized event')
             return
         await ctx.channel.send('Creating')
