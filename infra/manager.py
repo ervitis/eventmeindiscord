@@ -18,16 +18,21 @@ class SecretManager(object):
             '.',
             base64.b64decode(self.__sec_folder).decode('ascii')
         )
+        _sf = os.path.join(_p, base64.b64decode(self.__sec_file_name).decode('ascii'))
+
+        if os.path.exists(_sf):
+            return
+
         _v = os.getenv(base64.b64decode(self.__env_gcp_n).decode('ascii'), None)
         if not _v:
             raise ValueError('I will not connect...')
 
         try:
-            _sf = os.path.join(_p, base64.b64decode(self.__sec_file_name).decode('ascii'))
-            if not os.path.exists(_sf):
+            if not os.path.exists(_p):
                 os.mkdir(_p)
+            if not os.path.exists(_sf):
                 with open(_sf, 'w') as f:
-                    f.write(_v)
+                    f.write(base64.b64decode(_v).decode('ascii'))
         except Exception as e:
             raise e
 

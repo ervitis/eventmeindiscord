@@ -118,7 +118,7 @@ class Calendar(object):
     __default_calendar = 'primary'
 
     def __init__(self, smanager: SecretManager):
-        self._creds: Credentials = Type['None']
+        self._creds = None
         self._service = None
         self._smanager = smanager
 
