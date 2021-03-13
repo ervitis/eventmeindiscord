@@ -1,14 +1,17 @@
-name: Deploy to Google App Engine
+name: Deploy
+
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
+
 jobs:
   build:
-    name: GAE Deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: google-github-actions/deploy-appengine@main
+      - uses: akhileshns/heroku-deploy@v3.12.12 # This is the action
         with:
-          credentials: ${{ secrets.gcp_credentials }}
+          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          heroku_app_name: ${{secrets.HEROKU_APP_NAME}}
+          heroku_email: ${{secrets.EMAIL}}
