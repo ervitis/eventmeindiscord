@@ -5,13 +5,14 @@ import logging
 from discord.ext import commands
 
 from handlers.calendar import Calendar, Event
+from infra.manager import SecretManager
 
 
 class EventMeBot(commands.Cog):
     def __init__(self, bot_client):
         self._bot = bot_client
         self._subcommands = ['new']
-        self._cal_service = Calendar()
+        self._cal_service = Calendar(SecretManager())
         self.__logger = logging.getLogger(__name__)
 
     @commands.group(name='ev', help='create a calendar event')
@@ -26,7 +27,7 @@ class EventMeBot(commands.Cog):
         event = None
         try:
             event = Event(name=name, start=start, end=end)
-        except ValueError:
+        except ValueError as e:
             self.__logger.error(f'Exception ocurred with the event: {e}')
             await ctx.channel.send('Unrecognized event')
 

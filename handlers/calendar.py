@@ -12,6 +12,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+from infra.manager import SecretManager
+
 
 class EventTime(object):
 
@@ -115,9 +117,10 @@ class Calendar(object):
     __secret_file = os.path.join('.', 'secret', 'client-secret.json')
     __default_calendar = 'primary'
 
-    def __init__(self):
+    def __init__(self, smanager: SecretManager):
         self._creds: Credentials = Type['None']
         self._service = None
+        self._smanager = smanager
 
     def _load_credentials(self) -> None:
         if os.path.exists(self.__token_file):
@@ -135,6 +138,11 @@ class Calendar(object):
                 ft.write(self._creds.to_json())
 
     def _build_service(self) -> None:
+        try:
+            self._smanager.save()
+        except Exception as e:
+            raise e
+
         self._load_credentials()
         self._service = build('calendar', 'v3', credentials=self._creds)
 
@@ -148,9 +156,10 @@ class Calendar(object):
             print(event)
 
     def create_event(self, event: Event):
-        if not self._service:
-            self._build_service()
         try:
+            if not self._service:
+                self._build_service()
+
             body = event.to_json()
             return self._service.events().insert(calendarId=self.__default_calendar, body=body).execute()
         except Exception as e:

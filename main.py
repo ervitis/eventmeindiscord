@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-import os
+import logging
 
-import discord
 from discord.ext import commands
-from dotenv import load_dotenv
 
+from infra.manager import SecretManager
 
 EXTENSIONS = [
     'eventme'
@@ -12,8 +11,7 @@ EXTENSIONS = [
 
 
 def get_token() -> str:
-    load_dotenv()
-    return os.getenv('DISCORD_TOKEN')
+    return SecretManager.discord()
 
 
 def create_client() -> commands.Bot:
@@ -29,6 +27,7 @@ def load_extensions(client: commands.Bot) -> commands.Bot:
 
 
 if __name__ == '__main__':
+    __logger = logging.getLogger(__name__)
     client = create_client()
     client = load_extensions(client)
     client.run(get_token(), bot=True, reconnect=True)
