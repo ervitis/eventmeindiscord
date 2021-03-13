@@ -28,6 +28,8 @@ def load_extensions(client: commands.Bot) -> commands.Bot:
 
 if __name__ == '__main__':
     __logger = logging.getLogger(__name__)
+    __logger.info('Starting client')
     client = create_client()
     client = load_extensions(client)
+    __logger.info('Extensions loaded')
     client.run(get_token(), bot=True, reconnect=True)
