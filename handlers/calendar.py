@@ -5,7 +5,6 @@ import re
 from datetime import datetime, timedelta
 
 from pytz import timezone
-from typing import Type
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
