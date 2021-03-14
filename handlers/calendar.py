@@ -8,7 +8,7 @@ from pytz import timezone
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 from googleapiclient.discovery import build
 
 from infra.manager import SecretManager
@@ -132,7 +132,10 @@ class Calendar(object):
                     self.__secret_file,
                     self.__SCOPES
                 )
-                self._creds = flow.run_local_server()
+                self._creds = flow.run_local_server(
+                    port=int(os.getenv('PORT', 8080)),
+                    host=os.getenv('HOST', 'localhost')
+                )
             with open(self.__token_file, 'w') as ft:
                 ft.write(self._creds.to_json())
 
